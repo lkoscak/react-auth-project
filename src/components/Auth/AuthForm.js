@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 
+import useHttp from "../../hooks/use-http";
+
 import useAuthContext from "../../hooks/use-auth-context";
 
 import classes from "./AuthForm.module.css";
@@ -7,11 +9,11 @@ import classes from "./AuthForm.module.css";
 const AuthForm = () => {
 	const authCtx = useAuthContext();
 
+	const [sendRequest, isLoading, error] = useHttp();
 	const emailInputRef = useRef(null);
 	const passwordInputRef = useRef(null);
 
 	const [isLogin, setIsLogin] = useState(true);
-	const [isLoading, setIsLoading] = useState(false);
 
 	const switchAuthModeHandler = () => {
 		setIsLogin((prevState) => !prevState);
@@ -28,40 +30,27 @@ const AuthForm = () => {
 				: "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=") +
 			"AIzaSyBxkfE8_d-EeIHWVBUWkIrEloggnCGDrd8";
 
-		setIsLoading(true);
-
-		fetch(url, {
-			method: "POST",
-			body: JSON.stringify({
-				email: enteredEmail,
-				password: enteredPassword,
-				returnSecureToken: true,
-			}),
-			headers: {
-				"Content-Type": "application/json",
+		sendRequest(
+			{
+				url,
+				method: "POST",
+				body: {
+					email: enteredEmail,
+					password: enteredPassword,
+					returnSecureToken: true,
+				},
+				headers: {
+					"Content-Type": "application/json",
+				},
 			},
-		})
-			.then((res) => {
-				if (res.ok) {
-					return res.json();
-				} else {
-					return res.json().then((data) => {
-						const { message: errorMessage = null } = data?.error;
-						throw new Error(errorMessage);
-					});
-				}
-			})
-			.then((data) => {
+			(data) => {
 				authCtx.login(data?.idToken);
-			})
-			.catch((error) => {
+			},
+			(error) => {
 				alert(error);
-			})
-			.finally(() => {
-				setIsLoading(false);
-			});
+			}
+		);
 	};
-
 	return (
 		<section className={classes.auth}>
 			<h1>{isLogin ? "Login" : "Sign Up"}</h1>
